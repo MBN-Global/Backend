@@ -8,16 +8,6 @@
 </head>
 <body>
     <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
-    <p>Hello World!</p>
+    <p>This is a test page.</p>
 </body>
 </html>
