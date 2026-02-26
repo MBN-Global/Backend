@@ -1,96 +1,70 @@
 <?php
+// app/Http/Controllers/UserController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
     /**
-     * Display a listing of all users.
+     * Liste des users (Admin only)
      */
-    public function index(): JsonResponse
+    public function index()
     {
-        return response()->json([
-            'success' => true,
-            'data' => User::all(),
-            'message' => 'Users retrieved successfully'
-        ]);
+        // ✅ Vérifier que l'user est admin
+        abort_unless(auth()->user()->role === 'admin', 403);
+
+        return response()->json(User::paginate(20));
     }
 
     /**
-     * Store a newly created user in storage.
+     * Afficher un user
      */
-    public function store(Request $request): JsonResponse
+    public function show($id)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', Rules\Password::defaults()],
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => $user,
-            'message' => 'User created successfully'
-        ], 201);
+        $user = User::findOrFail($id);
+        
+        return response()->json($user);
     }
 
     /**
-     * Display the specified user.
+     * Mettre à jour un user
      */
-    public function show(User $user): JsonResponse
+    public function update(Request $request, $id)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $user,
-            'message' => 'User retrieved successfully'
-        ]);
-    }
-
-    /**
-     * Update the specified user in storage.
-     */
-    public function update(Request $request, User $user): JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'password' => ['sometimes', Rules\Password::defaults()],
-        ]);
-
-        if (isset($validated['password'])) {
-            $validated['password'] = bcrypt($validated['password']);
+        $user = User::findOrFail($id);
+        
+        // ✅ Vérifier que c'est son propre profil ou admin
+        if ($request->user()->id !== $user->id && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'bio' => 'nullable|string|max:500',
+            'phone' => 'nullable|string',
+            'linkedin_url' => 'nullable|url',
+            'github_url' => 'nullable|url',
+        ]);
 
         $user->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'data' => $user,
-            'message' => 'User updated successfully'
-        ]);
+        return response()->json($user);
     }
 
     /**
-     * Remove the specified user from storage.
+     * Supprimer un user (Admin only)
      */
-    public function destroy(User $user): JsonResponse
+    public function destroy($id)
     {
+        abort_unless(auth()->user()->role === 'admin', 403);
+
+        $user = User::findOrFail($id);
         $user->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User deleted successfully'
-        ]);
+        return response()->json(['message' => 'Utilisateur supprimé']);
     }
 }
