@@ -3,12 +3,20 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\JobController;
-use App\Http\Controllers\JopApplicarionController;
+use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ArticleCategoryController;
+use App\Http\Controllers\ArticleController;
 
 // ========== PUBLIC ROUTES ==========
+
+// Companies (public)
+Route::get('/companies', [CompanyController::class, 'index']);
+Route::get('/companies/partners', [CompanyController::class, 'partners']);
+Route::get('/companies/{id}', [CompanyController::class, 'show']);
 
 // Vérifier invitation (public)
 Route::post('/invitations/verify', [InvitationController::class, 'verify']);
@@ -20,6 +28,20 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 // Routes publics jobs
 Route::get('/jobs', [JobController::class, 'index']);
 Route::get('/jobs/{id}', [JobController::class, 'show']);
+
+// ⚠️  /articles/featured DOIT être déclaré AVANT /articles/{slug}
+//     sinon Laravel interpréterait "featured" comme un slug
+ 
+Route::get('/article-categories', [ArticleCategoryController::class, 'index']);
+ 
+Route::get('/articles',          [ArticleController::class, 'index']);
+Route::get('/articles/featured', [ArticleController::class, 'featured']);
+Route::get('/articles/{slug}',   [ArticleController::class, 'show']);
+
+// ── blogs ────────────────────────────────────────────────────────────────────
+Route::get('/blog-categories',        [PostController::class, 'categories']);
+Route::get('/posts',                  [PostController::class, 'index']);
+Route::get('/posts/{slug}',           [PostController::class, 'show']);
 
 // ========== PROTECTED ROUTES ==========
 
@@ -37,6 +59,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::patch('/users/{id}', [UserController::class, 'update']);
     Route::post('/users/{id}/avatar', [UserController::class, 'uploadAvatar']);
+    Route::post('/users/{id}/cv',   [UserController::class, 'uploadCv']);
+    Route::delete('/users/{id}/cv', [UserController::class, 'deleteCv']);
 
     // Jobs - CRUD (admin/company)
     Route::post('/jobs', [JobController::class, 'store']);
@@ -51,4 +75,49 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/applications/{id}/status', [JobApplicationController::class, 'updateStatus']);
     Route::post('/applications/{id}/withdraw', [JobApplicationController::class, 'withdraw']);
     Route::delete('/applications/{id}', [JobApplicationController::class, 'destroy']);
+
+    // COMPANIES - CRUD (admin only)
+    // ----------------------------------------
+    Route::post('/companies', [CompanyController::class, 'store']);
+    Route::patch('/companies/{id}', [CompanyController::class, 'update']);
+    Route::delete('/companies/{id}', [CompanyController::class, 'destroy']);
+    
+    // Company logo
+    Route::post('/companies/{id}/logo', [CompanyController::class, 'uploadLogo']);
+    
+    // Company status toggles
+    Route::post('/companies/{id}/toggle-partner', [CompanyController::class, 'togglePartner']);
+    Route::post('/companies/{id}/toggle-verified', [CompanyController::class, 'toggleVerified']);
+
+    // Vote "utile" — tous les connectés
+    Route::post('/articles/{slug}/helpful', [ArticleController::class, 'markHelpful']);
+ 
+    // Rédaction — pedagogical | bde_member (check inline dans le controller)
+    Route::post('/articles',                      [ArticleController::class, 'store']);
+    Route::patch('/articles/{id}',                [ArticleController::class, 'update']);
+    Route::delete('/articles/{id}',               [ArticleController::class, 'destroy']);
+    Route::post('/articles/{id}/toggle-publish',  [ArticleController::class, 'togglePublish']);
+    Route::post('/articles/{id}/cover',           [ArticleController::class, 'uploadCover']);
+ 
+    // Catégories — même rôles
+    Route::post('/article-categories',            [ArticleCategoryController::class, 'store']);
+    Route::patch('/article-categories/{id}',      [ArticleCategoryController::class, 'update']);
+    Route::delete('/article-categories/{id}',     [ArticleCategoryController::class, 'destroy']);
+
+     // Posts CRUD
+    Route::post('/posts',                      [PostController::class, 'store']);
+    Route::patch('/posts/{id}',                [PostController::class, 'update']);
+    Route::delete('/posts/{id}',               [PostController::class, 'destroy']);
+    Route::post('/posts/{id}/toggle-publish',  [PostController::class, 'togglePublish']);
+    Route::post('/posts/{id}/cover',           [PostController::class, 'uploadCoverImage']);
+ 
+    // Réactions
+    Route::post('/posts/{id}/react',           [PostController::class, 'react']);
+ 
+    // Commentaires
+    Route::get('/posts/{postId}/comments',     [CommentController::class, 'index']);
+    Route::post('/posts/{postId}/comments',    [CommentController::class, 'store']);
+    Route::get('/comments/{id}/replies',       [CommentController::class, 'replies']);
+    Route::patch('/comments/{id}',             [CommentController::class, 'update']);
+    Route::delete('/comments/{id}',            [CommentController::class, 'destroy']);
 });

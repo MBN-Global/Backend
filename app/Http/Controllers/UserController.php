@@ -2,6 +2,7 @@
 // app/Http/Controllers/UserController.php
 
 namespace App\Http\Controllers;
+use Illuminate\Http\JsonResponse;
 
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -11,13 +12,50 @@ use Illuminate\Support\Facades\Storage;
 class UserController extends Controller
 {
     /**
-     * Afficher un profil utilisateur
+     * GET /users/{id}
+     * Profil public — retourne UserResource + articles publiés si auteur
      */
-    public function show($id)
+    public function show(Request $request, string $id): JsonResponse
     {
         $user = User::with('info')->findOrFail($id);
-        
-        return new UserResource($user);
+    
+        // Articles publiés si auteur
+        $articles = [];
+        $articlesCount = 0;
+    
+        if (in_array($user->role, ['pedagogical', 'bde_member'])) {
+            $articlesQuery = \App\Models\Article::with('category')
+                ->where('author_id', $user->id)
+                ->where('is_published', true)
+                ->orderByDesc('created_at');
+    
+            $articlesCount = $articlesQuery->count();
+    
+            $articles = $articlesQuery->limit(6)->get()->map(fn($a) => [
+                'id'                  => $a->id,
+                'title'               => $a->title,
+                'slug'                => $a->slug,
+                'description'         => $a->description,
+                'difficulty'          => $a->difficulty,
+                'estimated_read_time' => $a->estimated_read_time,
+                'views_count'         => $a->views_count,
+                'created_at'          => $a->created_at,
+                'category'            => $a->category ? [
+                    'name' => $a->category->name,
+                    'icon' => $a->category->icon,
+                    'slug' => $a->category->slug,
+                ] : null,
+            ]);
+        }
+ 
+        // UserResource + champs supplémentaires via additional()
+        return (new UserResource($user))
+            ->additional([
+                'articles'       => $articles,
+                'articles_count' => $articlesCount,
+                'is_own_profile' => $request->user()?->id === $user->id,
+            ])
+            ->response();
     }
 
     /**
@@ -118,5 +156,72 @@ class UserController extends Controller
         }
         
         return response()->json(['message' => 'Aucun fichier trouvé'], 400);
+    }
+
+    public function uploadCv(Request $request, string $id): JsonResponse
+    {
+        // Seul l'utilisateur lui-même peut uploader son CV
+        abort_unless($request->user()->id === $id, 403, 'Action non autorisée');
+    
+        $request->validate([
+            'cv' => 'required|file|mimes:pdf|max:5120', // 5 Mo max
+        ]);
+    
+        $userInfo = $request->user()->info;
+    
+        // Supprimer l'ancien CV du storage si existant
+        if ($userInfo->cv_url) {
+            $oldPath = str_replace('/storage/', '', $userInfo->cv_url);
+            \Storage::disk('public')->delete($oldPath);
+        }
+    
+        // Stocker le nouveau CV
+        $path = $request->file('cv')->store("users/{$id}/cv", 'public');
+        $url  = '/storage/' . $path;
+    
+        // Mettre à jour UserInfo
+        $userInfo->update(['cv_url' => $url]);
+    
+        // Recalculer la complétion du profil
+        $userInfo->update([
+            'profile_completion' => $userInfo->calculateProfileCompletion(),
+        ]);
+    
+        return response()->json([
+            'data' => [
+                'cv_url'             => $url,
+                'profile_completion' => $userInfo->fresh()->profile_completion,
+            ],
+            'message' => 'CV uploadé avec succès',
+        ]);
+    }
+ 
+    /**
+     * DELETE /users/{id}/cv
+     * Suppression du CV
+     */
+    public function deleteCv(Request $request, string $id): JsonResponse
+    {
+        abort_unless($request->user()->id === $id, 403, 'Action non autorisée');
+    
+        $userInfo = $request->user()->info;
+    
+        if ($userInfo->cv_url) {
+            $path = str_replace('/storage/', '', $userInfo->cv_url);
+            \Storage::disk('public')->delete($path);
+    
+            $userInfo->update(['cv_url' => null]);
+            $userInfo->update([
+                'profile_completion' => $userInfo->calculateProfileCompletion(),
+            ]);
+        }
+    
+        return response()->json([
+            'data' => [
+                'cv_url'             => null,
+                'profile_completion' => $userInfo->fresh()->profile_completion,
+            ],
+            'message' => 'CV supprimé',
+        ]);
     }
 }

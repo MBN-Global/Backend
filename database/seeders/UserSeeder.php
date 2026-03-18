@@ -60,5 +60,21 @@ class UserSeeder extends Seeder
             'linkedin_url' => 'https://linkedin.com/in/marie-martin',
             'profile_completion' => 85,
         ]);
+         $bde = User::create([
+            'name' => 'Belem Gloire',
+            'email' => 'belem@campushub.fr',
+            'password' => Hash::make('password'),
+            'role' => 'bde_member',
+            'email_verified_at' => now(),
+        ]);
+
+        $bde->info->update([
+            'program' => 'Master Informatique',
+            'graduation_year' => 2022,
+            'campus' => 'Lyon',
+            'skills' => ['Python', 'Django', 'Machine Learning'],
+            'linkedin_url' => 'https://linkedin.com/in/marie-martin',
+            'profile_completion' => 85,
+        ]);
     }
 }
