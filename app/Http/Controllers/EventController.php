@@ -113,21 +113,42 @@ class EventController extends Controller
             'target_roles.*' => 'in:student,alumni,bde_member,pedagogical,company,admin',
         ]);
 
-        $event->update($validated);
+        $attendeeIds = EventAttendance::where('event_id', $event->id)
+            ->where('status', 'registered')
+            ->pluck('user_id')
+            ->toArray();
 
-        return response()->json(new EventResource($event->load('organizer')));
+        $event->update($validated);
+        $event->load('organizer');
+
+        if (!empty($attendeeIds)) {
+            $this->publishEvent(RealtimeEvent::EVENT_UPDATED, [
+                'eventId'     => $event->id,
+                'eventTitle'  => $event->title,
+                'location'    => $event->location,
+                'startDate'   => $event->start_date->toISOString(),
+                'attendeeIds' => $attendeeIds,
+            ]);
+        }
+
+        return response()->json(new EventResource($event));
     }
 
     /**
-     * DELETE /events/{id} — Supprimer un événement (admin seulement)
+     * DELETE /events/{id} — Annuler/supprimer un événement (organisateur ou admin)
+     * Notifie tous les inscrits via Redis.
      */
     public function destroy(Request $request, $id)
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Non autorisé'], 403);
-        }
-
         $event = CampusEvent::findOrFail($id);
+        $this->requireOrganizer($request, $event);
+
+        $attendeeIds = EventAttendance::where('event_id', $event->id)
+            ->where('status', 'registered')
+            ->pluck('user_id')
+            ->toArray();
+
+        $eventTitle = $event->title;
 
         if ($event->cover_image) {
             Storage::disk('public')->delete($event->cover_image);
@@ -135,7 +156,15 @@ class EventController extends Controller
 
         $event->delete();
 
-        return response()->json(['message' => 'Événement supprimé']);
+        if (!empty($attendeeIds)) {
+            $this->publishEvent(RealtimeEvent::EVENT_CANCELLED, [
+                'eventId'     => $id,
+                'eventTitle'  => $eventTitle,
+                'attendeeIds' => $attendeeIds,
+            ]);
+        }
+
+        return response()->json(['message' => 'Événement annulé']);
     }
 
     /**

@@ -160,9 +160,71 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        // Eager load info
         $user = $request->user()->load('info');
-
         return new UserResource($user);
+    }
+
+    /**
+     * PATCH /account/password — Change password
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Mot de passe actuel incorrect'], 422);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return response()->json(['message' => 'Mot de passe modifié avec succès']);
+    }
+
+    /**
+     * PATCH /account/email — Change email (requires password confirmation)
+     */
+    public function changeEmail(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'email'    => 'required|email|unique:users,email,' . $user->id,
+            'password' => 'required|string',
+        ]);
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Mot de passe incorrect'], 422);
+        }
+
+        $user->update(['email' => $request->email]);
+
+        return response()->json(['message' => 'Email modifié avec succès', 'email' => $user->email]);
+    }
+
+    /**
+     * DELETE /account — Delete own account (requires password confirmation)
+     */
+    public function deleteAccount(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Mot de passe incorrect'], 422);
+        }
+
+        // Revoke all Sanctum tokens then soft-delete
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Compte supprimé']);
     }
 }

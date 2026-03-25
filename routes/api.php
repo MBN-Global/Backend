@@ -57,6 +57,11 @@ Route::middleware(['auth:sanctum', 'not.suspended'])->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'user']);
+
+    // Account settings
+    Route::patch('/account/password', [AuthController::class, 'changePassword']);
+    Route::patch('/account/email',    [AuthController::class, 'changeEmail']);
+    Route::delete('/account',         [AuthController::class, 'deleteAccount']);
     
     // Invitations (Admin only - vérification dans controller)
     Route::get('/invitations', [InvitationController::class, 'index']);

@@ -14,6 +14,8 @@ enum RealtimeEvent: string
     // Events/Feed
     case EVENT_PUBLISHED = 'event.published';
     case EVENT_ATTENDANCE_CONFIRMED = 'event.attendance.confirmed';
+    case EVENT_UPDATED = 'event.updated';
+    case EVENT_CANCELLED = 'event.cancelled';
     case EVENT_REMINDER = 'event.reminder';
     case POST_CREATED = 'post.created';
     case COMMENT_ADDED = 'comment.added';

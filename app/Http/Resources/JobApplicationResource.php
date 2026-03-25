@@ -15,8 +15,8 @@ class JobApplicationResource extends JsonResource
             'job_id' => $this->job_id,
             'user_id' => $this->user_id,
             
-            'job' => JobResource::make($this->whenLoaded('job')),
-            'user' => UserResource::make($this->whenLoaded('user')),
+            'job'       => JobResource::make($this->whenLoaded('job')),
+            'applicant' => UserResource::make($this->whenLoaded('user')),
             
             'cover_letter' => $this->cover_letter,
             'cv_url' => $this->cv_url,
