@@ -41,5 +41,19 @@ return [
         'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
         'scheme' => 'https',
     ],
+    
+    'mailjet' => [
+        'key'    => env('MAILJET_APIKEY'),
+        'secret' => env('MAILJET_APISECRET'),
+        'transactional' => [
+            'call' => true,
+            'options' => [
+                'url'      => 'api.mailjet.com',
+                'version'  => 'v3.1',
+                'call'     => true,
+                'secured'  => true,
+            ],
+        ],
+    ],
 
 ];

@@ -5,6 +5,9 @@ return [
     'default' => env('MAIL_MAILER', 'resend'),
 
     'mailers' => [
+        'mailjet' => [
+        'transport' => 'mailjet',
+        ],
         'resend' => [
             'transport' => 'resend',
         ],
