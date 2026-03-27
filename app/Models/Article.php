@@ -113,8 +113,7 @@ class Article extends Model
      */
     public function helpfulVoters()
     {
-        return $this->belongsToMany(User::class, 'article_helpful')
-                    ->withTimestamps();
+        return $this->belongsToMany(User::class, 'article_helpful');
     }
 
     // ── Scopes ────────────────────────────────────────────────────────────────

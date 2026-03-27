@@ -104,7 +104,7 @@ Route::middleware(['auth:sanctum', 'not.suspended'])->group(function () {
     Route::post('/companies/{id}/toggle-verified', [CompanyController::class, 'toggleVerified']);
 
     // Vote "utile" — tous les connectés
-    Route::post('/articles/{slug}/helpful', [ArticleController::class, 'markHelpful']);
+    Route::post('/articles/{id}/helpful', [ArticleController::class, 'markHelpful']);
  
     // Rédaction — pedagogical | bde_member (check inline dans le controller)
     Route::post('/articles',                      [ArticleController::class, 'store']);

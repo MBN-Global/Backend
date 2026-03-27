@@ -147,6 +147,17 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
         abort_if($user->role === 'admin', 422, 'Impossible de modifier le rôle d\'un administrateur');
 
+        $allowedTransitions = [
+            'student'    => ['bde_member', 'alumni'],
+            'bde_member' => ['student', 'alumni'],
+        ];
+
+        abort_unless(
+            isset($allowedTransitions[$user->role]) && in_array($data['role'], $allowedTransitions[$user->role]),
+            422,
+            'Transition de rôle non autorisée'
+        );
+
         $user->update(['role' => $data['role']]);
 
         return response()->json([

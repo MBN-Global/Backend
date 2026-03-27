@@ -258,12 +258,12 @@ class ArticleController extends Controller
     }
 
     /**
-     * POST /articles/{slug}/helpful
+     * POST /articles/{id}/helpful
      * Vote "utile" — 1 vote max par user par article
      */
-    public function markHelpful(Request $request, string $slug): JsonResponse
+    public function markHelpful(Request $request, string $id): JsonResponse
     {
-        $article = Article::where('slug', $slug)->firstOrFail();
+        $article = Article::where('id', $id)->firstOrFail();
         $userId  = $request->user()->id;
 
         // Vérifier si déjà voté
